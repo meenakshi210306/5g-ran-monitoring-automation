@@ -1,4 +1,4 @@
-const API_URL = 'https://fiveg-ran-api.onrender.com'
+const API_URL = 'https://fiveg-ran-monitoring-automation.onrender.com'
 
 function getToken(){
   return localStorage.getItem('5g-token') || ''
