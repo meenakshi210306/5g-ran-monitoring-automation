@@ -4,14 +4,15 @@ import { restartNode } from '../services/api'
 
 export default function NodeCard({node, hasAlert=false}){
   const { user } = useAuth()
+  const isRestarting = node.status === 'restarting'
   const health = hasAlert || node.metrics.latency > 100 || node.metrics.packetLoss > 5 || node.metrics.cpu > 90
     ? 'critical'
     : node.metrics.latency > 75 || node.metrics.packetLoss > 3 || node.metrics.cpu > 80
       ? 'warning'
       : 'healthy'
-  const statusColor = health === 'critical' ? '#fee2e2' : health === 'warning' ? '#fef3c7' : '#dcfce7'
+  const statusColor = isRestarting ? '#e0f2fe' : health === 'critical' ? '#fee2e2' : health === 'warning' ? '#fef3c7' : '#dcfce7'
   const border = hasAlert ? '2px solid #dc3545' : '1px solid rgba(255,255,255,0.08)'
-  const statusTone = health === 'critical' ? '#b91c1c' : health === 'warning' ? '#92400e' : '#166534'
+  const statusTone = isRestarting ? '#075985' : health === 'critical' ? '#b91c1c' : health === 'warning' ? '#92400e' : '#166534'
 
   const handleRestart = async () => {
     await restartNode(node.id)
@@ -27,11 +28,11 @@ export default function NodeCard({node, hasAlert=false}){
       <div className="metric-line"><span className="metric-label">Memory</span><span className="metric-value">{node.metrics.memory.toFixed(1)}%</span></div>
       <div className="metric-line"><span className="metric-label">Uptime</span><span className="metric-value">{Math.floor((node.uptimeSeconds || 0) / 60)}m {((node.uptimeSeconds || 0) % 60).toFixed(0)}s</span></div>
       <div className="node-status" style={{color: statusTone, background: 'rgba(255,255,255,0.72)'}}>
-        {health.toUpperCase()} • {node.status}{hasAlert ? ' • ALERT' : ''}
+        {(isRestarting ? 'RESTARTING' : health.toUpperCase())} • {node.status}{hasAlert ? ' • ALERT' : ''}
       </div>
       {canAccess(user?.role, PERMISSIONS.RESTART_NODE) ? (
-        <button className="primary-button" type="button" onClick={handleRestart} style={{marginTop: 14, width: '100%'}}>
-          Restart node
+        <button className="primary-button" type="button" onClick={handleRestart} disabled={isRestarting} style={{marginTop: 14, width: '100%'}}>
+          {isRestarting ? 'Restarting...' : 'Restart node'}
         </button>
       ) : null}
     </div>

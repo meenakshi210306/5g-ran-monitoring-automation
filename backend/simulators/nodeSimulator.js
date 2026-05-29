@@ -171,6 +171,7 @@ class NodeSimulator extends EventEmitter {
 
     node.status = 'restarting'
     logger.log('INFO', `Restarting node ${nodeId}`)
+    this.emit('update', this.getNodes())
 
     setTimeout(() => {
       node.status = 'up'
@@ -180,7 +181,7 @@ class NodeSimulator extends EventEmitter {
       node.metrics.packetLoss = Math.max(0, node.metrics.packetLoss * 0.2)
       logger.log('INFO', `Node ${nodeId} restarted`)
       this.emit('update', this.getNodes())
-    }, 3000 + Math.random() * 4000)
+    }, 800 + Math.random() * 400)
 
     return true
   }
