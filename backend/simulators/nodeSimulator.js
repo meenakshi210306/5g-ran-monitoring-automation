@@ -12,6 +12,12 @@ class NodeSimulator extends EventEmitter {
     this.alerts = []
     this.interval = null
     this.historyLen = 24
+    this.throughputProfiles = {
+      gNB: { min: 140, max: 320 },
+      CU: { min: 90, max: 200 },
+      DU: { min: 70, max: 170 },
+      eNB: { min: 35, max: 120 }
+    }
     this._initNodes()
   }
 
@@ -20,9 +26,10 @@ class NodeSimulator extends EventEmitter {
 
     for (let i = 1; i <= 8; i++) {
       const type = types[(i - 1) % types.length]
+      const profile = this.throughputProfiles[type]
       const metrics = {
         latency: this._rand(5, 20),
-        throughput: this._rand(10, 500),
+        throughput: this._rand(profile.min, profile.max),
         packetLoss: this._rand(0, 1),
         cpu: this._rand(5, 40),
         memory: this._rand(10, 60)
@@ -63,6 +70,10 @@ class NodeSimulator extends EventEmitter {
     return Math.random() * (max - min) + min
   }
 
+  _clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value))
+  }
+
   start(freqMs = 2000) {
     if (this.interval) return
     this.interval = setInterval(() => this._tick(), freqMs)
@@ -77,6 +88,8 @@ class NodeSimulator extends EventEmitter {
     const newAlerts = []
 
     this.nodes.forEach(node => {
+      const profile = this.throughputProfiles[node.type] || { min: 50, max: 150 }
+
       if (node.status !== 'up') {
         this._pushHistory(node)
         return
@@ -84,7 +97,13 @@ class NodeSimulator extends EventEmitter {
 
       node.uptimeSeconds += 2
       node.metrics.latency = Math.max(0, node.metrics.latency + (Math.random() - 0.5) * 10)
-      node.metrics.throughput = Math.max(0, node.metrics.throughput + (Math.random() - 0.5) * 80)
+      const congestionPenalty = Math.max(0, (node.metrics.cpu - 70) * 1.1 + node.metrics.packetLoss * 12 + Math.max(0, node.metrics.latency - 60) * 0.25)
+      const throughputNoise = (Math.random() - 0.5) * (profile.max - profile.min) * 0.12
+      node.metrics.throughput = this._clamp(
+        node.metrics.throughput + throughputNoise - congestionPenalty,
+        profile.min * 0.45,
+        profile.max
+      )
       node.metrics.packetLoss = Math.max(0, node.metrics.packetLoss + (Math.random() - 0.5) * 1)
       node.metrics.cpu = Math.min(100, Math.max(0, node.metrics.cpu + (Math.random() - 0.5) * 12))
       node.metrics.memory = Math.min(100, Math.max(0, node.metrics.memory + (Math.random() - 0.5) * 8))
