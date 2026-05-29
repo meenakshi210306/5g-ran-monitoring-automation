@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
+const BASE = import.meta.env.VITE_API_BASE || 'https://fiveg-ran-monitoring-automation.onrender.com'
 
 export async function loginRequest(username, password){
   const response = await fetch(`${BASE}/api/auth/login`, {

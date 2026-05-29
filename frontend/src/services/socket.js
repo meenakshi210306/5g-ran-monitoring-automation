@@ -1,7 +1,6 @@
 import { io } from 'socket.io-client'
 
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
-const socket = io(BASE)
+const socket = io('https://telecom-backend.onrender.com')
 
 export function onNodes(cb){
   socket.on('nodes', cb)
