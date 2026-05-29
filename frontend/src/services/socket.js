@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client'
 
-const socket = io('https://telecom-backend.onrender.com')
+const socket = io('https://fiveg-ran-monitoring-automation.onrender.com')
 
 export function onNodes(cb){
   socket.on('nodes', cb)
