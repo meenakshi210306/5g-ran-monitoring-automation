@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      - PORT=3000
+      - JWT_SECRET=dev-secret
+    ports:
+      - "3000:3000"
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "5173:80"
