@@ -11,7 +11,9 @@ export default function Users(){
   const [users, setUsers] = useState(fallbackUsers)
 
   useEffect(() => {
-    fetchUsers().then(setUsers).catch(() => setUsers(fallbackUsers))
+    fetchUsers()
+      .then(data => setUsers(Array.isArray(data) ? data : fallbackUsers))
+      .catch(() => setUsers(fallbackUsers))
   }, [])
 
   return (

@@ -12,14 +12,14 @@ export default function Dashboard(){
   const [analytics, setAnalytics] = useState({ predictedFailureAlerts: [] })
 
   useEffect(()=>{
-    fetchNodes().then(setNodes).catch(()=>{})
-    fetchAlerts().then(setAlerts).catch(()=>{})
-    fetchAnalytics().then(setAnalytics).catch(()=>{})
+    fetchNodes().then(data => setNodes(Array.isArray(data) ? data : [])).catch(()=>{})
+    fetchAlerts().then(data => setAlerts(Array.isArray(data) ? data : [])).catch(()=>{})
+    fetchAnalytics().then(data => setAnalytics(data && typeof data === 'object' ? data : { predictedFailureAlerts: [] })).catch(()=>{})
   },[])
 
   useEffect(()=>{
-    onNodes((data)=> setNodes(data))
-    onAlerts((a)=> setAlerts(a))
+    onNodes((data)=> setNodes(Array.isArray(data) ? data : []))
+    onAlerts((a)=> setAlerts(Array.isArray(a) ? a : []))
   },[])
 
   // compute set of nodes currently in alerts

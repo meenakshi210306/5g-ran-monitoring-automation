@@ -9,58 +9,58 @@ function authHeaders(){
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+async function requestJson(path, options = {}) {
+  const res = await fetch(`${API_URL}${path}`, options)
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`)
+  }
+  return data
+}
+
 export async function fetchNodes(){
-  const res = await fetch(`${API_URL}/api/nodes`, { headers: authHeaders() })
-  return res.json()
+  return requestJson('/api/nodes', { headers: authHeaders() })
 }
 
 export async function fetchLogs(){
-  const res = await fetch(`${API_URL}/api/logs`, { headers: authHeaders() })
-  return res.json()
+  return requestJson('/api/logs', { headers: authHeaders() })
 }
 
 export async function fetchAlerts(){
-  const res = await fetch(`${API_URL}/api/alerts`, { headers: authHeaders() })
-  return res.json()
+  return requestJson('/api/alerts', { headers: authHeaders() })
 }
 
 export async function fetchAnalytics(){
-  const res = await fetch(`${API_URL}/api/analytics`, { headers: authHeaders() })
-  return res.json()
+  return requestJson('/api/analytics', { headers: authHeaders() })
 }
 
 export async function restartNode(nodeId){
-  const res = await fetch(`${API_URL}/api/nodes/${nodeId}/restart`, {
+  return requestJson(`/api/nodes/${nodeId}/restart`, {
     method: 'POST',
     headers: authHeaders()
   })
-  return res.json()
 }
 
 export async function clearLogs(){
-  const res = await fetch(`${API_URL}/api/logs`, {
+  return requestJson('/api/logs', {
     method: 'DELETE',
     headers: authHeaders()
   })
-  return res.json()
 }
 
 export async function fetchThresholds(){
-  const res = await fetch(`${API_URL}/api/settings/thresholds`, { headers: authHeaders() })
-  return res.json()
+  return requestJson('/api/settings/thresholds', { headers: authHeaders() })
 }
 
 export async function updateThresholds(thresholds){
-  const res = await fetch(`${API_URL}/api/settings/thresholds`, {
+  return requestJson('/api/settings/thresholds', {
     method: 'PUT',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ thresholds })
   })
-  return res.json()
 }
 
 export async function fetchUsers(){
-  const res = await fetch(`${API_URL}/api/users`, { headers: authHeaders() })
-  return res.json()
+  return requestJson('/api/users', { headers: authHeaders() })
 }
 

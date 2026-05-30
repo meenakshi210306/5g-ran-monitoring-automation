@@ -34,6 +34,9 @@ export function AuthProvider({children}){
     isAuthenticated: Boolean(token && user),
     login: async (username, password) => {
       const response = await loginRequest(username, password)
+      // Persist immediately so first dashboard requests include Authorization.
+      localStorage.setItem('5g-token', response.token)
+      localStorage.setItem('5g-user', JSON.stringify(response.user))
       setToken(response.token)
       setUser(response.user)
       return response.user

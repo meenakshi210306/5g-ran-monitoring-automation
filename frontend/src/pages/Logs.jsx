@@ -8,9 +8,9 @@ export default function Logs(){
   const { user } = useAuth()
   const canDeleteLogs = canAccess(user?.role, PERMISSIONS.DELETE_LOGS)
 
-  const reloadLogs = () => fetchLogs().then(setLogs).catch(()=>{})
+  const reloadLogs = () => fetchLogs().then(data => setLogs(Array.isArray(data) ? data : [])).catch(()=>{})
 
-  useEffect(()=>{ fetchLogs().then(setLogs).catch(()=>{}) },[])
+  useEffect(()=>{ fetchLogs().then(data => setLogs(Array.isArray(data) ? data : [])).catch(()=>{}) },[])
 
   const handleClearLogs = async () => {
     await clearLogs()
