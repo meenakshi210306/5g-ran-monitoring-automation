@@ -1,7 +1,7 @@
 module.exports = {
-  cpu: 90,         // percent -> alert when >90%
-  memory: 90,      // percent
-  packetLoss: 5.0, // percent -> alert when >5%
-  latency: 100,    // ms -> alert when >100ms
-  throughputLow: 5 // Mbps - too low indicates problem
+  latency: { warning: 20, critical: 50 },
+  packetLoss: { warning: 1, critical: 5 },
+  cpu: { warning: 70, critical: 90 },
+  memory: { warning: 75, critical: 90 },
+  throughput: { warning: 20, critical: 5 }
 }

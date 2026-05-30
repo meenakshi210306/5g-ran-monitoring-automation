@@ -1,3 +1,5 @@
+import { getNodeStatus } from '../utils/metricStatus'
+
 export default function StatusTable({nodes=[]}){
   const getMetrics = (node) => node.metrics || node
 
@@ -16,12 +18,13 @@ export default function StatusTable({nodes=[]}){
       <tbody>
         {nodes.map(n => {
           const metrics = getMetrics(n)
+          const health = n.health || getNodeStatus(n)
           return (
             <tr key={n.id}>
               <td>{n.id}</td>
               <td>{n.type}</td>
-              <td><span className={`health-dot health-${n.health || 'healthy'}`}>{(n.health || 'healthy').toUpperCase()}</span></td>
-              <td>{Number(metrics.latency || 0).toFixed(1)}</td>
+              <td><span className={`health-dot health-${health}`}>{health === 'no-data' ? 'NO DATA' : health.toUpperCase()}</span></td>
+              <td>{metrics.latency === 0 || metrics.latency === null || metrics.latency === undefined ? 'No data' : Number(metrics.latency || 0).toFixed(1)}</td>
               <td>{Number(metrics.throughput || 0).toFixed(1)}</td>
               <td>{Number(metrics.packetLoss || 0).toFixed(2)}%</td>
               <td>{Number(metrics.cpu || 0).toFixed(1)}%</td>

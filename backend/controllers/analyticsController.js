@@ -1,4 +1,5 @@
 const simulator = require('../simulators/nodeSimulator')
+const thresholds = require('../utils/thresholds')
 
 function trendScore(values) {
   if (!values || values.length < 4) return 0
@@ -7,28 +8,44 @@ function trendScore(values) {
 }
 
 function nodeHealth(node) {
-  const highLatency = node.metrics.latency > 100
-  const highLoss = node.metrics.packetLoss > 5
-  const highCpu = node.metrics.cpu > 90
-  const critical = [highLatency, highLoss, highCpu].filter(Boolean).length
-  if (critical >= 2) return 'critical'
-  if (critical === 1) return 'warning'
+  const latency = node.metrics.latency
+  if (latency === 0 || latency === null || latency === undefined) return 'no-data'
+
+  const states = [
+    latency > thresholds.latency.critical ? 'critical' : latency > thresholds.latency.warning ? 'warning' : 'healthy',
+    node.metrics.packetLoss > thresholds.packetLoss.critical ? 'critical' : node.metrics.packetLoss > thresholds.packetLoss.warning ? 'warning' : 'healthy',
+    node.metrics.cpu > thresholds.cpu.critical ? 'critical' : node.metrics.cpu > thresholds.cpu.warning ? 'warning' : 'healthy',
+    node.metrics.memory > thresholds.memory.critical ? 'critical' : node.metrics.memory > thresholds.memory.warning ? 'warning' : 'healthy',
+    node.metrics.throughput < thresholds.throughput.critical ? 'critical' : node.metrics.throughput < thresholds.throughput.warning ? 'warning' : 'healthy'
+  ]
+
+  if (states.includes('critical')) return 'critical'
+  if (states.includes('warning')) return 'warning'
   return node.status === 'up' ? 'healthy' : 'warning'
+}
+
+function percentile(values, p) {
+  if (!values.length) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const index = Math.ceil(p * sorted.length) - 1
+  return sorted[Math.min(sorted.length - 1, Math.max(0, index))]
 }
 
 exports.summary = (req, res) => {
   const nodes = simulator.getNodes()
   const alerts = simulator.getAlerts()
 
-  const averageLatency = nodes.length
-    ? nodes.reduce((sum, node) => sum + node.metrics.latency, 0) / nodes.length
+  const latencyValues = nodes.map(node => node.metrics.latency).filter(value => typeof value === 'number' && value > 0)
+  const averageLatency = latencyValues.length
+    ? latencyValues.reduce((sum, value) => sum + value, 0) / latencyValues.length
     : 0
+  const p95Latency = percentile(latencyValues, 0.95)
 
   const uptimePercent = nodes.length
     ? (nodes.filter(node => node.status === 'up').length / nodes.length) * 100
     : 0
 
-  const totalFailures = alerts.length
+  const totalFailures = simulator.getFailureEvents()
 
   const nodePerformance = nodes.map(node => ({
     id: node.id,
@@ -62,6 +79,7 @@ exports.summary = (req, res) => {
 
   res.json({
     averageLatency,
+    p95Latency,
     uptimePercent,
     totalFailures,
     nodePerformance,

@@ -447,6 +447,26 @@ body.theme-light .panel {
 .health-healthy { color: #15803d; background: rgba(21, 128, 61, 0.12); }
 .health-warning { color: #a16207; background: rgba(161, 98, 7, 0.12); }
 .health-critical { color: #b91c1c; background: rgba(185, 28, 28, 0.12); }
+.health-no-data { color: #64748b; background: rgba(100, 116, 139, 0.12); }
+
+.metric-value-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.metric-dot-healthy { box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12); }
+.metric-dot-warning { box-shadow: 0 0 0 3px rgba(161, 98, 7, 0.12); }
+.metric-dot-critical { box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12); }
+.metric-dot-no-data { box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12); }
 
 .login-page {
   min-height: 100vh;

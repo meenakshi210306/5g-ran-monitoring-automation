@@ -2,20 +2,34 @@ import { useEffect, useState } from 'react'
 import TrafficChart from '../components/TrafficChart'
 import AlertPanel from '../components/AlertPanel'
 import StatusTable from '../components/StatusTable'
-import { fetchNodes, fetchLogs, fetchAnalytics } from '../services/api'
+import { fetchNodes, fetchAnalytics } from '../services/api'
+import { getNodeStatus } from '../utils/metricStatus'
 
 export default function Analytics(){
   const [nodes, setNodes] = useState([])
-  const [logs, setLogs] = useState([])
   const [analytics, setAnalytics] = useState({ predictedFailureAlerts: [] })
 
   useEffect(()=>{ fetchNodes().then(setNodes).catch(()=>{}) },[])
-  useEffect(()=>{ fetchLogs().then(setLogs).catch(()=>{}) },[])
   useEffect(()=>{ fetchAnalytics().then(setAnalytics).catch(()=>{}) },[])
 
-  const avgLatency = analytics.averageLatency ?? (nodes.length ? (nodes.reduce((s,n)=> s + (n.metrics?.latency||0),0) / nodes.length) : 0)
+  const avgLatency = analytics.averageLatency ?? (() => {
+    const latencies = nodes.map(node => Number(node.metrics?.latency || 0)).filter(value => value > 0)
+    if (!latencies.length) return 0
+    return latencies.reduce((sum, value) => sum + value, 0) / latencies.length
+  })()
+  const p95Latency = analytics.p95Latency ?? (() => {
+    const latencies = nodes.map(node => Number(node.metrics?.latency || 0)).filter(value => value > 0)
+    if (!latencies.length) return 0
+    const sorted = [...latencies].sort((a, b) => a - b)
+    const index = Math.ceil(sorted.length * 0.95) - 1
+    return sorted[Math.max(0, Math.min(sorted.length - 1, index))]
+  })()
   const uptimePercent = analytics.uptimePercent ?? (nodes.length ? (nodes.filter(n=>n.status==='up').length / nodes.length * 100) : 0)
-  const totalFailures = (logs||[]).filter(l=> l.includes('[ERROR]') || l.toLowerCase().includes('restart')).length
+  const totalFailures = analytics.totalFailures ?? 0
+  const statusNodes = (analytics.nodePerformance || nodes).map(node => ({
+    ...node,
+    health: node.health || getNodeStatus(node)
+  }))
 
   return (
     <div className="page-shell">
@@ -31,6 +45,10 @@ export default function Analytics(){
           <div className="stat-card">
             <strong>Average latency</strong>
             <div>{avgLatency.toFixed(1)} ms</div>
+          </div>
+          <div className="stat-card">
+            <strong>P95 latency</strong>
+            <div>{p95Latency.toFixed(1)} ms</div>
           </div>
           <div className="stat-card">
             <strong>Uptime</strong>
@@ -59,7 +77,7 @@ export default function Analytics(){
         <AlertPanel alerts={analytics.predictedFailureAlerts || []} />
       </div>
 
-      <StatusTable nodes={analytics.nodePerformance || nodes} />
+      <StatusTable nodes={statusNodes} />
     </div>
   )
 }

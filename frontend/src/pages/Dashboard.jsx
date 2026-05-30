@@ -5,6 +5,7 @@ import { fetchNodes, fetchAnalytics, fetchAlerts } from '../services/api'
 import { onNodes, onAlerts } from '../services/socket'
 import AlertPanel from '../components/AlertPanel'
 import TrafficChart from '../components/TrafficChart'
+import { getNodeStatus } from '../utils/metricStatus'
 
 export default function Dashboard(){
   const [nodes, setNodes] = useState([])
@@ -23,7 +24,10 @@ export default function Dashboard(){
   },[])
 
   // compute set of nodes currently in alerts
-  const alertNodeIds = new Set(alerts.map(a=>a.node))
+  const statusNodes = nodes.map(node => ({
+    ...node,
+    health: getNodeStatus(node)
+  }))
 
   return (
     <div className="page-shell">
@@ -46,7 +50,7 @@ export default function Dashboard(){
             </div>
           </div>
           <div className="cards-grid">
-            {nodes.map(n => <NodeCard key={n.id} node={n} hasAlert={alertNodeIds.has(n.id)} />)}
+            {nodes.map(n => <NodeCard key={n.id} node={n} />)}
           </div>
         </section>
 
@@ -61,10 +65,7 @@ export default function Dashboard(){
         </div>
       </div>
 
-      <StatusTable nodes={nodes.map(node => ({
-        ...node,
-        health: alerts.some(alert => alert.node === node.id) ? 'critical' : 'healthy'
-      }))} />
+      <StatusTable nodes={statusNodes} />
     </div>
   )
 }

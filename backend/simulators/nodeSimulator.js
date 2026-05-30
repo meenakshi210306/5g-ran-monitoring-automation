@@ -10,6 +10,7 @@ class NodeSimulator extends EventEmitter {
     super()
     this.nodes = []
     this.alerts = []
+    this.failureEvents = 0
     this.interval = null
     this.historyLen = 24
     this.throughputProfiles = {
@@ -19,6 +20,16 @@ class NodeSimulator extends EventEmitter {
       eNB: { min: 35, max: 120 }
     }
     this._initNodes()
+  }
+
+  _createFailureTracker() {
+    return {
+      latency: { streak: 0, counted: false },
+      packetLoss: { streak: 0, counted: false },
+      cpu: { streak: 0, counted: false },
+      memory: { streak: 0, counted: false },
+      throughput: { streak: 0, counted: false }
+    }
   }
 
   _initNodes() {
@@ -42,6 +53,7 @@ class NodeSimulator extends EventEmitter {
         uptimeSeconds: 0,
         lastRestartAt: null,
         createdAt: Date.now(),
+        failureTracker: this._createFailureTracker(),
         metrics,
         history: {
           latency: [],
@@ -72,6 +84,41 @@ class NodeSimulator extends EventEmitter {
 
   _clamp(value, min, max) {
     return Math.min(max, Math.max(min, value))
+  }
+
+  _metricState(metric, value) {
+    const config = thresholds[metric]
+    if (metric === 'latency' && (value === 0 || value === null || value === undefined)) {
+      return 'no-data'
+    }
+    if (value === null || value === undefined) return 'no-data'
+
+    if (metric === 'throughput') {
+      if (value < config.critical) return 'critical'
+      if (value < config.warning) return 'warning'
+      return 'healthy'
+    }
+
+    if (value > config.critical) return 'critical'
+    if (value > config.warning) return 'warning'
+    return 'healthy'
+  }
+
+  _registerFailure(node, metric, state) {
+    const tracker = node.failureTracker?.[metric]
+    if (!tracker) return
+
+    if (state === 'critical') {
+      tracker.streak += 1
+      if (tracker.streak >= 3 && !tracker.counted) {
+        tracker.counted = true
+        this.failureEvents += 1
+      }
+      return
+    }
+
+    tracker.streak = 0
+    tracker.counted = false
   }
 
   start(freqMs = 2000) {
@@ -110,11 +157,23 @@ class NodeSimulator extends EventEmitter {
 
       this._pushHistory(node)
 
-      if (node.metrics.latency > thresholds.latency) newAlerts.push({ node: node.id, metric: 'latency', value: node.metrics.latency })
-      if (node.metrics.packetLoss > thresholds.packetLoss) newAlerts.push({ node: node.id, metric: 'packetLoss', value: node.metrics.packetLoss })
-      if (node.metrics.cpu > thresholds.cpu) newAlerts.push({ node: node.id, metric: 'cpu', value: node.metrics.cpu })
-      if (node.metrics.memory > thresholds.memory) newAlerts.push({ node: node.id, metric: 'memory', value: node.metrics.memory })
-      if (node.metrics.throughput < thresholds.throughputLow) newAlerts.push({ node: node.id, metric: 'throughputLow', value: node.metrics.throughput })
+      const metricStates = {
+        latency: this._metricState('latency', node.metrics.latency),
+        packetLoss: this._metricState('packetLoss', node.metrics.packetLoss),
+        cpu: this._metricState('cpu', node.metrics.cpu),
+        memory: this._metricState('memory', node.metrics.memory),
+        throughput: this._metricState('throughput', node.metrics.throughput)
+      }
+
+      Object.entries(metricStates).forEach(([metric, state]) => {
+        this._registerFailure(node, metric, state)
+      })
+
+      if (metricStates.latency === 'critical') newAlerts.push({ node: node.id, metric: 'latency', value: node.metrics.latency })
+      if (metricStates.packetLoss === 'critical') newAlerts.push({ node: node.id, metric: 'packetLoss', value: node.metrics.packetLoss })
+      if (metricStates.cpu === 'critical') newAlerts.push({ node: node.id, metric: 'cpu', value: node.metrics.cpu })
+      if (metricStates.memory === 'critical') newAlerts.push({ node: node.id, metric: 'memory', value: node.metrics.memory })
+      if (metricStates.throughput === 'critical') newAlerts.push({ node: node.id, metric: 'throughput', value: node.metrics.throughput })
     })
 
     newAlerts.forEach(alert => this._createAlert(alert))
@@ -141,7 +200,7 @@ class NodeSimulator extends EventEmitter {
   _createAlert(raw) {
     const now = new Date().toISOString()
     let friendly = ''
-    if (raw.metric === 'throughputLow') friendly = `throughput low (${raw.value.toFixed(1)} Mbps)`
+    if (raw.metric === 'throughput') friendly = `throughput ${raw.value.toFixed(1)} Mbps`
     else if (raw.metric === 'packetLoss') friendly = `packet loss ${raw.value.toFixed(2)}%`
     else if (raw.metric === 'latency') friendly = `latency ${raw.value.toFixed(1)} ms`
     else if (raw.metric === 'cpu') friendly = `cpu ${raw.value.toFixed(1)}%`
@@ -181,6 +240,10 @@ class NodeSimulator extends EventEmitter {
 
   getAlerts() {
     return this.alerts.slice().reverse()
+  }
+
+  getFailureEvents() {
+    return this.failureEvents
   }
 
   restartNode(nodeId) {
